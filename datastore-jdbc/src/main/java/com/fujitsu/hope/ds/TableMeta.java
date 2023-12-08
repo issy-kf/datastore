@@ -240,6 +240,9 @@ class TableMeta {
 			return new IndexMetaBuilder(this, name);
 		}
 		TableMeta meta(){
+			if (keyList.size() == 0) 
+				throw new UnsupportedOperationException(
+						"TableMeta:" + tableName + "has no key"); 
 			ColumnMeta<?>[] keyArray = new ColumnMeta<?>[keyList.size()];
 			keyList.toArray(keyArray);
 			ColumnMeta<?>[] columnArray = new ColumnMeta<?>[columnList.size()];
