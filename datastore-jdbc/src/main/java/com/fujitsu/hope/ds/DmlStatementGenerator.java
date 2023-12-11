@@ -3,16 +3,28 @@ package com.fujitsu.hope.ds;
 class DmlStatementGenerator {
 	protected StatementGenerateHelper helper = new StatementGenerateHelper();
 	
-	public String entity(TableMeta meta){
+	/**
+	 * generate statement:
+	 *  "select key1, key2, property1, property2 from table_name"
+	 * @param meta
+	 * @return String: statement
+	 */
+	String getEntity(TableMeta meta){
 		return "select " + 
 				helper.connectString(", ", helper.joinArrays(meta.keyNames(), meta.columnNames())) + " " + 
-				"from " + meta.tableName() + " ";
+				"from " + meta.tableName() + " " + helper.where(meta.keyNames());
 	}
 	
-	public String key(TableMeta meta){
+	/**
+	 * generate statement:
+	 *  "select key1, key2 from table_name"
+	 * @param meta
+	 * @return String: statement
+	 */
+	String selectKeys(TableMeta meta, String statementWhereOrderby){
 		return "select " + 
 				helper.connectString(", ", meta.keyNames()) + " " + 
-				"from " + meta.tableName() + " ";
+				"from " + meta.tableName() + " " + statementWhereOrderby;
 	}
 	
 	/**
@@ -20,9 +32,9 @@ class DmlStatementGenerator {
 	 * 	"delete from table_name 
 	 *  	where key[0]=? and key[1]=? and ... "
 	 * @param meta
-	 * @return
+	 * @return String: statement
 	 */
-	public String delete(TableMeta meta){
+	String delete(TableMeta meta){
 		return "delete from " + meta.tableName() + " " + helper.where(meta.keyNames()); 
 	}
 	
@@ -32,9 +44,9 @@ class DmlStatementGenerator {
 	 * 		set (property[0]=?, property[1]=?, ... , property[n-1]=?)
 	 *  	where key[0]=? and key[1]=? and ... "
 	 * @param meta
-	 * @return
+	 * @return String: statement
 	 */
-	public String update(TableMeta meta){
+	String update(TableMeta meta){
 		return "update " + meta.tableName() + " " 
 				+ helper.set(meta.columnNames()) + " " 
 				+ helper.where(meta.keyNames());
@@ -46,9 +58,9 @@ class DmlStatementGenerator {
 	 * 		table_name (keyName[0], keyName[1], propertyName[0], ... ) 
 	 * 		values (?, ?, ?)"
 	 * @param meta
-	 * @return
+	 * @return String: statement
 	 */
-	public String insert(TableMeta meta){
+	String insert(TableMeta meta){
 		return "insert " + 
 				helper.into(meta) + " " + 
 				helper.values(meta);
