@@ -17,8 +17,6 @@ import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Test;
 
-import com.fujitsu.hope.datastore.PreparedStatementExecutor;
-import com.fujitsu.hope.datastore.TableMeta;
 import com.fujitsu.hope.datastore.TableMeta.ColumnMeta;
 import com.fujitsu.hope.datastore.TableMeta.ColumnMetaType;
 

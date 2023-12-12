@@ -5,7 +5,6 @@ import static org.junit.Assert.assertThat;
 
 import org.junit.Test;
 
-import com.fujitsu.hope.datastore.TableMeta;
 import com.fujitsu.hope.datastore.TableMeta.ColumnMeta;
 
 public class TableMetaTest {
