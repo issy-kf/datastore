@@ -1,4 +1,4 @@
-package com.fujitsu.hope.ds;
+package com.fujitsu.hope.datastore;
 
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -24,14 +24,12 @@ class TableMeta {
 	 * Property of Primary Key
 	 */
 	private final ColumnMeta<?>[] keys;
-	private final IndexMeta[] indexes;
 	private final Map<String, ColumnMetaType<?>> metaTypeMap = 
 			new HashMap<String, ColumnMetaType<?>>();
-	TableMeta(String tableName, ColumnMeta<?>[] keys, ColumnMeta<?>[] columns, IndexMeta[] indexes){
+	TableMeta(String tableName, ColumnMeta<?>[] keys, ColumnMeta<?>[] columns){
 		this.tableName = tableName;
 		this.keys = keys;
 		this.properties = columns;	
-		this.indexes = indexes;
 		for(ColumnMeta<?> meta : columns) metaTypeMap.put(meta.name, meta.type);
 		for(ColumnMeta<?> meta : keys) metaTypeMap.put(meta.name, meta.type);
 	}
@@ -67,9 +65,6 @@ class TableMeta {
 		for(int i=0; i<keys.length; i++) ret[i] = keys[i];
 		for(int i=0; i<properties.length; i++) ret[i+keys.length] = properties[i];
 		return ret;
-	}
-	IndexMeta[] indexes(){
-		return indexes;
 	}
 	ColumnMetaType<?> metaTypeOf(String name){
 		return metaTypeMap.get(name);
@@ -162,25 +157,6 @@ class TableMeta {
 			return type;
 		}
 	}
-	static class IndexMeta{
-		private final String name;
-		private final ColumnMeta<?>[] columns;
-		private final boolean unique;
-		IndexMeta(String name, boolean unique, ColumnMeta<?>...columns){
-			this.name = name;
-			this.columns = columns;
-			this.unique = unique;
-		}
-		ColumnMeta<?>[] columns(){
-			return columns;
-		}
-		String getName() {
-			return name;
-		}
-		boolean isUnique() {
-			return unique;
-		}
-	}
 	static TableMetaBuilder table(String tableName){
 		return new TableMetaBuilder(tableName);
 	}
@@ -216,7 +192,6 @@ class TableMeta {
 		private final String tableName;
 		private List<ColumnMeta<?>> columnList = new ArrayList<ColumnMeta<?>>();
 		private List<ColumnMeta<?>> keyList = new ArrayList<ColumnMeta<?>>();
-		private List<IndexMeta> indexList = new ArrayList<IndexMeta>();
 		private TableMetaBuilder(String tableName){
 			this.tableName = tableName;
 		}
@@ -227,17 +202,11 @@ class TableMeta {
 		private <T> void addKey(ColumnMeta<T> meta){
 			keyList.add(meta);
 		}
-		private void addIndex(IndexMeta index){
-			this.indexList.add(index);
-		}
 		ColumnMetaBuilder key(String name){
 			return new ColumnMetaBuilder(this, name, true);
 		}
 		ColumnMetaBuilder column(String name){
 			return new ColumnMetaBuilder(this, name, false);
-		}
-		IndexMetaBuilder index(String name){
-			return new IndexMetaBuilder(this, name);
 		}
 		TableMeta meta(){
 			if (keyList.size() == 0) 
@@ -247,43 +216,7 @@ class TableMeta {
 			keyList.toArray(keyArray);
 			ColumnMeta<?>[] columnArray = new ColumnMeta<?>[columnList.size()];
 			columnList.toArray(columnArray);
-			IndexMeta[] indexes = new IndexMeta[indexList.size()];
-			indexList.toArray(indexes);
-			return new TableMeta(tableName, keyArray, columnArray, indexes);
-		}
-	}
-	static class IndexMetaBuilder{
-		private final String name;
-		private final TableMetaBuilder builder;
-		private boolean unique = false;
-		IndexMetaBuilder(TableMetaBuilder builder, String name){
-			this.builder = builder;
-			this.name = name;
-		}
-		IndexMetaBuilder unique(){
-			unique = true;
-			return this;
-		}
-		TableMetaBuilder of(String... columns){
-			this.builder.addIndex(createIndexMeta(columns));
-			return this.builder;
-		}
-		private IndexMeta createIndexMeta(String...columns){
-			if (columns.length == 0)
-				throw new IllegalArgumentException("columns length = 0");
-			ColumnMeta<?>[] meta = new ColumnMeta[columns.length];			
-			for (int i=0; i<columns.length; i++)
-				meta[i] = metaOf(columns[i]);
-			return new IndexMeta(name, unique, meta);
-		}
-		private ColumnMeta<?> metaOf(String name){
-			for (ColumnMeta<?> meta : builder.columnList)
-				if (meta.getName().equals(name))
-					return meta;
-			for (ColumnMeta<?> meta : builder.keyList)
-				if (meta.getName().equals(name))
-					return meta;
-			throw new IllegalArgumentException("column ["+name+"] is not exists");
+			return new TableMeta(tableName, keyArray, columnArray);
 		}
 	}
 }

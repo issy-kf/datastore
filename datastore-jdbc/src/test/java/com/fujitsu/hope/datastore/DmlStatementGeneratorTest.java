@@ -1,11 +1,13 @@
-package com.fujitsu.hope.ds;
+package com.fujitsu.hope.datastore;
 
 import static org.hamcrest.CoreMatchers.is;
 import static org.junit.Assert.assertThat;
 
 import org.junit.Test;
 
-import com.fujitsu.hope.ds.TableMeta.ColumnMeta;
+import com.fujitsu.hope.datastore.DmlStatementGenerator;
+import com.fujitsu.hope.datastore.TableMeta;
+import com.fujitsu.hope.datastore.TableMeta.ColumnMeta;
 
 public class DmlStatementGeneratorTest {
 	static TableMeta person(){
@@ -20,36 +22,31 @@ public class DmlStatementGeneratorTest {
 
 	@Test
 	public void testDmlStatementGeneratorCasePersonSelectKey(){
-		DmlStatementGenerator generator = new DmlStatementGenerator();
-		String result = generator.selectKeys(person(), "where personId=?");
+		String result = DmlStatementGenerator.selectKeys(person(), "where personId=?");
 		assertThat(result, is("select personId from person where personId=?"));
 	}
 	
 	@Test
 	public void testDmlStatementGeneratorCasePersonGetEntiry(){
-		DmlStatementGenerator generator = new DmlStatementGenerator();
-		String result = generator.getEntity(person());
+		String result = DmlStatementGenerator.getEntity(person());
 		assertThat(result, is("select personId, firstName, familyName, age from person where personId=?"));
 	}
 	
 	@Test
 	public void testDmlStatementGeneratorCasePersonInsert(){
-		DmlStatementGenerator generator = new DmlStatementGenerator();
-		String result = generator.insert(person());
+		String result = DmlStatementGenerator.insert(person());
 		assertThat(result, is("insert into person (personId, firstName, familyName, age) values (?, ?, ?, ?)"));
 	}
 	
 	@Test
 	public void testDmlStatementGeneratorCasePersonUpdate(){
-		DmlStatementGenerator generator = new DmlStatementGenerator();
-		String result = generator.update(person());
+		String result = DmlStatementGenerator.update(person());
 		assertThat(result, is("update person set firstName=?, familyName=?, age=? where personId=?"));
 	}
 	
 	@Test
 	public void testDmlStatementGeneratorCasePersonDelete(){
-		DmlStatementGenerator generator = new DmlStatementGenerator();
-		String result = generator.delete(person());
+		String result = DmlStatementGenerator.delete(person());
 		assertThat(result, is("delete from person where personId=?"));
 	}
 
@@ -66,45 +63,39 @@ public class DmlStatementGeneratorTest {
 	
 	@Test
 	public void testDmlStatementGeneratorCaseAccountSelectKey(){
-		DmlStatementGenerator generator = new DmlStatementGenerator();
 		TableMeta account = account();
-		String result = generator.selectKeys(account, "where personId=?");
+		String result = DmlStatementGenerator.selectKeys(account, "where personId=?");
 		assertThat(result, is("select personId, email from account where personId=?"));
 	}
 
 	@Test
 	public void testDmlStatementGeneratorCaseAccountSelectKey02(){
-		DmlStatementGenerator generator = new DmlStatementGenerator();
 		TableMeta account = account();
-		String result = generator.selectKeys(account, "where personId=? and email=?");
+		String result = DmlStatementGenerator.selectKeys(account, "where personId=? and email=?");
 		assertThat(result, is("select personId, email from account where personId=? and email=?"));
 	}
 	
 	@Test
 	public void testDmlStatementGeneratorCaseAccountGetEntiry(){
-		DmlStatementGenerator generator = new DmlStatementGenerator();
-		String result = generator.getEntity(account());
+		String result = DmlStatementGenerator.getEntity(account());
 		assertThat(result, is("select personId, email, firstName, familyName, age from account where personId=? and email=?"));
 	}
 	
 	@Test
 	public void testDMLStatementGeneratorCaseAccountInsert(){
-		DmlStatementGenerator generator = new DmlStatementGenerator();
-		String result = generator.insert(account());
+		String result = DmlStatementGenerator.insert(account());
 		assertThat(result, is("insert into account (personId, email, firstName, familyName, age) values (?, ?, ?, ?, ?)"));
 	}
 	
 	@Test
 	public void testDMLStatementGeneratorCaseAccountUpdate(){
-		DmlStatementGenerator generator = new DmlStatementGenerator();
-		String result = generator.update(account());
+		String result = DmlStatementGenerator.update(account());
 		assertThat(result, is("update account set firstName=?, familyName=?, age=? where personId=? and email=?"));
 	}
 	
 	@Test
 	public void testDMLStatementGeneratorCaseAccountDelete(){
-		DmlStatementGenerator generator = new DmlStatementGenerator();
-		String result = generator.delete(account());
+		String result = DmlStatementGenerator.delete(account());
 		assertThat(result, is("delete from account where personId=? and email=?"));
 	}
 }

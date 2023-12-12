@@ -1,18 +1,17 @@
-package com.fujitsu.hope.ds;
+package com.fujitsu.hope.datastore;
 
 class DmlStatementGenerator {
-	protected StatementGenerateHelper helper = new StatementGenerateHelper();
-	
+
 	/**
 	 * generate statement:
 	 *  "select key1, key2, property1, property2 from table_name"
 	 * @param meta
 	 * @return String: statement
 	 */
-	String getEntity(TableMeta meta){
+	static String getEntity(TableMeta meta){
 		return "select " + 
-				helper.connectString(", ", helper.joinArrays(meta.keyNames(), meta.columnNames())) + " " + 
-				"from " + meta.tableName() + " " + helper.where(meta.keyNames());
+				StatementGenerateHelper.connectString(", ", StatementGenerateHelper.joinArrays(meta.keyNames(), meta.columnNames())) + " " + 
+				"from " + meta.tableName() + " " + StatementGenerateHelper.where(meta.keyNames());
 	}
 	
 	/**
@@ -21,9 +20,9 @@ class DmlStatementGenerator {
 	 * @param meta
 	 * @return String: statement
 	 */
-	String selectKeys(TableMeta meta, String statementWhereOrderby){
+	static String selectKeys(TableMeta meta, String statementWhereOrderby){
 		return "select " + 
-				helper.connectString(", ", meta.keyNames()) + " " + 
+				StatementGenerateHelper.connectString(", ", meta.keyNames()) + " " + 
 				"from " + meta.tableName() + " " + statementWhereOrderby;
 	}
 	
@@ -34,8 +33,8 @@ class DmlStatementGenerator {
 	 * @param meta
 	 * @return String: statement
 	 */
-	String delete(TableMeta meta){
-		return "delete from " + meta.tableName() + " " + helper.where(meta.keyNames()); 
+	static String delete(TableMeta meta){
+		return "delete from " + meta.tableName() + " " + StatementGenerateHelper.where(meta.keyNames()); 
 	}
 	
 	/**
@@ -46,10 +45,10 @@ class DmlStatementGenerator {
 	 * @param meta
 	 * @return String: statement
 	 */
-	String update(TableMeta meta){
+	static String update(TableMeta meta){
 		return "update " + meta.tableName() + " " 
-				+ helper.set(meta.columnNames()) + " " 
-				+ helper.where(meta.keyNames());
+				+ StatementGenerateHelper.set(meta.columnNames()) + " " 
+				+ StatementGenerateHelper.where(meta.keyNames());
 	}
 	
 	/**
@@ -60,10 +59,10 @@ class DmlStatementGenerator {
 	 * @param meta
 	 * @return String: statement
 	 */
-	String insert(TableMeta meta){
+	static String insert(TableMeta meta){
 		return "insert " + 
-				helper.into(meta) + " " + 
-				helper.values(meta);
+				StatementGenerateHelper.into(meta) + " " + 
+				StatementGenerateHelper.values(meta);
 	}
 	
 	static class StatementGenerateHelper {
@@ -73,7 +72,7 @@ class DmlStatementGenerator {
 		 * @param args
 		 * @return
 		 */
-		String set(String... args){
+		static String set(String... args){
 			String[] addEquals = arrayAdditionalEquals(args);
 			return "set " + connectString(", ", addEquals);
 		}
@@ -84,13 +83,13 @@ class DmlStatementGenerator {
 		 * @param args
 		 * @return
 		 */
-		String where(String... args){
+		static String where(String... args){
 			String[] addEquals = arrayAdditionalEquals(args);
 			return "where " + connectString(" and ", addEquals);
 		}
 		
 		
-		String into(TableMeta meta){
+		static String into(TableMeta meta){
 			String[] joined = joinArrays(meta.keyNames(), meta.columnNames());
 			return "into "
 					+ meta.tableName() + " "
@@ -103,7 +102,7 @@ class DmlStatementGenerator {
 		 * @param meta
 		 * @return
 		 */
-		String values(TableMeta meta){
+		static String values(TableMeta meta){
 			int valuesLength = meta.columnNames().length + meta.keyNames().length;
 			String[] bindStrings = new String[valuesLength];
 			for(int i=0; i<valuesLength; i++)  bindStrings[i] = "?";
@@ -116,7 +115,7 @@ class DmlStatementGenerator {
 		 * @return
 		 * 		[values[0]=?,values[1]=?,,,values[n-1]=?]
 		 */
-		String[] arrayAdditionalEquals(String... values){
+		static String[] arrayAdditionalEquals(String... values){
 			String[] result = new String[values.length];
 			for(int i=0; i<values.length; i++) result[i] = values[i] + "=?";
 			return result;
@@ -127,7 +126,7 @@ class DmlStatementGenerator {
 		 * @param 
 		 * @return
 		 */
-		String connectString(String connector, String... values){
+		static String connectString(String connector, String... values){
 			StringBuilder sb = new StringBuilder();
 			boolean first = true;
 			for(String value : values){
@@ -139,7 +138,7 @@ class DmlStatementGenerator {
 		}
 		
 		
-		String inParentheses(String source){
+		static String inParentheses(String source){
 			StringBuilder sb = new StringBuilder();
 			sb.append("(");
 			sb.append(source);
@@ -152,7 +151,7 @@ class DmlStatementGenerator {
 		 * @param b
 		 * @return
 		 */
-		String[] joinArrays(String[] a, String[] b){
+		static String[] joinArrays(String[] a, String[] b){
 			int length = a.length + b.length;
 			String[] arrays = new String[length];
 			for(int i=0; i<a.length; i++) arrays[i] = a[i];

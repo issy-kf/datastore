@@ -1,11 +1,12 @@
-package com.fujitsu.hope.ds;
+package com.fujitsu.hope.datastore;
 
 import static org.hamcrest.CoreMatchers.is;
 import static org.junit.Assert.assertThat;
 
 import org.junit.Test;
 
-import com.fujitsu.hope.ds.TableMeta.ColumnMeta;
+import com.fujitsu.hope.datastore.TableMeta;
+import com.fujitsu.hope.datastore.TableMeta.ColumnMeta;
 
 public class TableMetaTest {
 	/**

@@ -1,4 +1,4 @@
-package com.fujitsu.hope.ds;
+package com.fujitsu.hope.datastore;
 
 import java.sql.Connection;
 import java.sql.DriverManager;
@@ -10,8 +10,9 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
-import com.fujitsu.hope.ds.TableMeta.ColumnMeta;
-import com.fujitsu.hope.ds.TableMeta.ColumnMetaType;
+import com.fujitsu.hope.datastore.TableMeta;
+import com.fujitsu.hope.datastore.TableMeta.ColumnMeta;
+import com.fujitsu.hope.datastore.TableMeta.ColumnMetaType;
 
 class SqliteUtils {
 	private static final String JDBC_CLASS = "org.sqlite.JDBC"; 

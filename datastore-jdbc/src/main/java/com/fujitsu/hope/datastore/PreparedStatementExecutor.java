@@ -1,4 +1,4 @@
-package com.fujitsu.hope.ds;
+package com.fujitsu.hope.datastore;
 
 import java.math.BigDecimal;
 import java.sql.Blob;
@@ -16,7 +16,10 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 import java.util.concurrent.ThreadFactory;
 
-
+/**
+ * TableMeta class is infomations of table for Relational Database 
+ * @author takayama
+ */
 class PreparedStatementExecutor {
 	private final PreparedStatementProvider provider; 
 	private final ExecutorService executorService;
@@ -98,16 +101,16 @@ class PreparedStatementExecutor {
 			this.executor = executor;
 		}
 		PreparedStatementBinder insert(){
-			return new PreparedStatementBinder( this.psTable.insert(), this.executor);
+			return new PreparedStatementBinder(this.psTable.insert(), this.executor);
 		}
 		PreparedStatementBinder update(){
-			return new PreparedStatementBinder( this.psTable.update(), this.executor);
+			return new PreparedStatementBinder(this.psTable.update(), this.executor);
 		}
 		PreparedStatementBinder delete(){
-			return new PreparedStatementBinder( this.psTable.delete(), this.executor);
+			return new PreparedStatementBinder(this.psTable.delete(), this.executor);
 		}
 		PreparedStatementBinder getEntity(){
-			return new PreparedStatementBinder( this.psTable.entity(), this.executor);
+			return new PreparedStatementBinder(this.psTable.entity(), this.executor);
 		}
 	}
 	
@@ -335,31 +338,29 @@ class PreparedStatementExecutor {
 	}
 	
 	class PreparedStatementFactory{
-		private final DmlStatementGenerator helper;
 		PreparedStatementExecutor executor;
 		PreparedStatementFactory(PreparedStatementExecutor executor){
-			helper = new DmlStatementGenerator();
 			this.executor = executor;
 		}
 		
 		PreparedStatement update(TableMeta meta){
-			return prepare(helper.update(meta));
+			return prepare(DmlStatementGenerator.update(meta));
 		}
 		
 		PreparedStatement insert(TableMeta meta){
-			return prepare(helper.insert(meta));
+			return prepare(DmlStatementGenerator.insert(meta));
 		}
 		
 		PreparedStatement delete(TableMeta meta){
-			return prepare(helper.delete(meta));
+			return prepare(DmlStatementGenerator.delete(meta));
 		}
 		
 		PreparedStatement getEntity(TableMeta meta){
-			return prepare(helper.getEntity(meta));
+			return prepare(DmlStatementGenerator.getEntity(meta));
 		}
 		
 		PreparedStatement selectKeys(TableMeta meta, String option){
-			return prepare(helper.selectKeys(meta, option));
+			return prepare(DmlStatementGenerator.selectKeys(meta, option));
 		}
 		
 		PreparedStatement prepare(String sql){
