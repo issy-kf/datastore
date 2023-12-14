@@ -17,7 +17,6 @@ import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Test;
 
-import com.fujitsu.hope.ds.PreparedStatementExecutor.PreparedStatementProviderException;
 import com.fujitsu.hope.ds.TableMeta.ColumnMeta;
 import com.fujitsu.hope.ds.TableMeta.ColumnMetaType;
 
@@ -87,11 +86,11 @@ public class PreparedStatementExecutorTest {
 	}
 	
 	@Test
-	public void testTableMetaBuildCase001() throws SQLException, PreparedStatementProviderException, InterruptedException, ExecutionException {
+	public void testTableMetaBuildCase001() throws InterruptedException, ExecutionException {
 		Iterator<Map<String, Object>> ite = null;
 		Map<String, Object> map = null;
 		
-		PreparedStatementExecutor executor = new PreparedStatementExecutor(CONN);
+		PreparedStatementExecutor executor = new PreparedStatementExecutor("test_executor", CONN);
 		assertThat(executor.table(ACCOUNT).insert().set(1).set("hoge001@fuga.com").set("foo001").set("bar001").set(101).executeUpdate().get(), is(1));
 		assertThat(executor.table(ACCOUNT).insert().set(2).set("hoge002@fuga.com").set("foo002").set("bar002").set(102).executeUpdate().get(), is(1));
 		assertThat(executor.table(ACCOUNT).insert().set(3).set("hoge003@fuga.com").set("foo003").set("bar003").set(103).executeUpdate().get(), is(1));
@@ -102,9 +101,11 @@ public class PreparedStatementExecutorTest {
 		assertThat(executor.table(ACCOUNT).insert().set(8).set("hoge008@fuga.com").set("foo008").set("bar008").set(108).executeUpdate().get(), is(1));
 		assertThat(executor.table(ACCOUNT).insert().set(9).set("hoge009@fuga.com").set("foo009").set("bar009").set(109).executeUpdate().get(), is(1));
 		
+		executor.transaction().commit();
+		
 		ite = executor.table(ACCOUNT).getEntity().
 				set(1).set("hoge001@fuga.com").
-				executeQuery(ACCOUNT_RESOLVER).get();
+				executeQuery().get().asIterator(ACCOUNT_RESOLVER);
 		assertThat(ite.hasNext(), is(true));
 		map = ite.next();
 		assertThat(map.get("profile1"), is("foo001"));
@@ -114,7 +115,7 @@ public class PreparedStatementExecutorTest {
 
 		ite = executor.table(ACCOUNT).getEntity().
 				set(9).set("hoge009@fuga.com").
-				executeQuery(ACCOUNT_RESOLVER).get();
+				executeQuery().get().asIterator(ACCOUNT_RESOLVER);
 	
 		assertThat(ite.hasNext(), is(true));
 		map = ite.next();
@@ -135,7 +136,7 @@ public class PreparedStatementExecutorTest {
 
 		ite = executor.table(ACCOUNT).getEntity().
 				set(1).set("hoge001@fuga.com").
-				executeQuery(ACCOUNT_RESOLVER).get();
+				executeQuery().get().asIterator(ACCOUNT_RESOLVER);
 		assertThat(ite.hasNext(), is(true));
 		map = ite.next();
 		assertThat(map.get("profile1"), is("bar001"));
@@ -145,7 +146,7 @@ public class PreparedStatementExecutorTest {
 
 		ite = executor.table(ACCOUNT).getEntity().
 				set(9).set("hoge009@fuga.com").
-				executeQuery(ACCOUNT_RESOLVER).get();
+				executeQuery().get().asIterator(ACCOUNT_RESOLVER);
 	
 		assertThat(ite.hasNext(), is(true));
 		map = ite.next();
@@ -166,13 +167,36 @@ public class PreparedStatementExecutorTest {
 
 		ite = executor.table(ACCOUNT).getEntity().
 				set(1).set("hoge001@fuga.com").
-				executeQuery(ACCOUNT_RESOLVER).get();
+				executeQuery().get().asIterator(ACCOUNT_RESOLVER);
 		assertThat(ite.hasNext(), is(false));
 
 		ite = executor.table(ACCOUNT).getEntity().
 				set(9).set("hoge009@fuga.com").
-				executeQuery(ACCOUNT_RESOLVER).get();
+				executeQuery().get().asIterator(ACCOUNT_RESOLVER);
 	
+		assertThat(ite.hasNext(), is(false));
+		
+		executor.transaction().rollback();
+		
+		ite = executor.table(ACCOUNT).getEntity().
+				set(1).set("hoge001@fuga.com").
+				executeQuery().get().asIterator(ACCOUNT_RESOLVER);
+		assertThat(ite.hasNext(), is(true));
+		map = ite.next();
+		assertThat(map.get("profile1"), is("foo001"));
+		assertThat(map.get("profile2"), is("bar001"));
+		assertThat(map.get("profileNo"), is(101));
+		assertThat(ite.hasNext(), is(false));
+
+		ite = executor.table(ACCOUNT).getEntity().
+				set(9).set("hoge009@fuga.com").
+				executeQuery().get().asIterator(ACCOUNT_RESOLVER);
+	
+		assertThat(ite.hasNext(), is(true));
+		map = ite.next();
+		assertThat(map.get("profile1"), is("foo009"));
+		assertThat(map.get("profile2"), is("bar009"));
+		assertThat(map.get("profileNo"), is(109));
 		assertThat(ite.hasNext(), is(false));
 	}
 }

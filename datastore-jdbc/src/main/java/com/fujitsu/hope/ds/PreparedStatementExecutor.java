@@ -17,10 +17,11 @@ import java.util.concurrent.Future;
 import java.util.concurrent.ThreadFactory;
 
 
-public class PreparedStatementExecutor {
+class PreparedStatementExecutor {
 	private final PreparedStatementProvider provider; 
-	private final ExecutorService service;
-
+	private final ExecutorService executorService;
+	private final ExecutorService fetcherService;
+	private final Connection connection;
 	private static ExecutorService createExecutorService(final String threadName) {
 		return Executors.newSingleThreadExecutor(new ThreadFactory() {
 			@Override
@@ -30,33 +31,83 @@ public class PreparedStatementExecutor {
 		}); 
 	}
 	
-	PreparedStatementExecutor(Connection connection){
-		this.service = createExecutorService(PreparedStatementExecutor.class.getSimpleName());
-		this.provider = new PreparedStatementProvider(connection, this.service);
+	PreparedStatementExecutor(String executorName, Connection connection){
+		this.executorService = createExecutorService(PreparedStatementExecutor.class.getSimpleName()+":"+executorName+":"+"#execute");
+		this.fetcherService = createExecutorService(PreparedStatementExecutor.class.getSimpleName()+":"+executorName+":"+"#fetch");
+		this.connection = connection;
+		this.provider = new PreparedStatementProvider(this);
+	}
+	
+	private Future<PreparedStatement> preparedStatement(String sql){
+		return this.executorService.submit(new Callable<PreparedStatement>() {
+			@Override
+			public PreparedStatement call() throws Exception {
+				return connection.prepareStatement(sql);
+			}
+		});
+	}
+	
+	private Future<Integer> executeUpdate (PreparedStatement ps) {
+		return this.executorService.submit(new Callable<Integer>() {
+			@Override
+			public Integer call() throws Exception {
+				return ps.executeUpdate();
+			}
+		});
+	}
+	
+	private Future<ResultSetFetcher> executeQuery (PreparedStatement ps, PreparedStatementExecutor executor) {
+		return this.executorService.submit(new Callable<ResultSetFetcher>() {
+			@Override
+			public ResultSetFetcher call() throws Exception {
+				ResultSet rs = ps.executeQuery();
+				return new ResultSetFetcher(rs, executor);
+			}
+		});
+	}
+	
+	private Future<Boolean> nextResultSet(ResultSet rs){
+		return this.fetcherService.submit(new Callable<Boolean>() {
+			@Override
+			public Boolean call() throws Exception {
+				boolean hasNext = rs.next(); 
+				return hasNext;
+			}
+		});
+	}
+	
+	private Future<Void> closeResultSet(ResultSet rs){
+		return this.fetcherService.submit(new Callable<Void>() {
+			@Override
+			public Void call() throws Exception {
+				rs.close();
+				return null;
+			}
+		});
 	}
 
 	PreparedStatementBuilder table(TableMeta table) {
-		return new PreparedStatementBuilder(this.provider.table(table), this.service);
+		return new PreparedStatementBuilder(this.provider.table(table), this);
 	}
 	
 	class PreparedStatementBuilder {
 		private final PreparedStatementTableCache psTable;
-		private final ExecutorService srv;
-		PreparedStatementBuilder (PreparedStatementTableCache psTable, ExecutorService service){
+		private final PreparedStatementExecutor executor;
+		PreparedStatementBuilder (PreparedStatementTableCache psTable, PreparedStatementExecutor executor){
 			this.psTable = psTable;
-			this.srv = service;
+			this.executor = executor;
 		}
-		PreparedStatementBinder insert() throws PreparedStatementProviderException {
-			return new PreparedStatementBinder( this.psTable.insert(), this.srv);
+		PreparedStatementBinder insert(){
+			return new PreparedStatementBinder( this.psTable.insert(), this.executor);
 		}
-		PreparedStatementBinder update() throws PreparedStatementProviderException {
-			return new PreparedStatementBinder( this.psTable.update(), this.srv);
+		PreparedStatementBinder update(){
+			return new PreparedStatementBinder( this.psTable.update(), this.executor);
 		}
-		PreparedStatementBinder delete() throws PreparedStatementProviderException {
-			return new PreparedStatementBinder( this.psTable.delete(), this.srv);
+		PreparedStatementBinder delete(){
+			return new PreparedStatementBinder( this.psTable.delete(), this.executor);
 		}
-		PreparedStatementBinder getEntity() throws PreparedStatementProviderException {
-			return new PreparedStatementBinder( this.psTable.entity(), this.srv);
+		PreparedStatementBinder getEntity(){
+			return new PreparedStatementBinder( this.psTable.entity(), this.executor);
 		}
 	}
 	
@@ -64,102 +115,153 @@ public class PreparedStatementExecutor {
 		T resolve(ResultSet rs);
 	}
 	
-	class ResultSetAsIterator<T> implements Iterator<T>{
-		private final ResultSetResolver<T> resolver;
+	class ResultSetFetcher {
 		private final ResultSet resultSet;
+		private final PreparedStatementExecutor executor;
 		private boolean hasNext = false;
-		ResultSetAsIterator(ResultSet resultSet, ResultSetResolver<T> resolver) throws SQLException{
-			this.resolver = resolver;
+		
+		ResultSetFetcher(ResultSet resultSet, PreparedStatementExecutor executor){
 			this.resultSet = resultSet;
-			this.hasNext = resultSet.next();
-			if (!hasNext) resultSet.close();
+			this.executor = executor;
+			fetch();
 		}
-		@Override
-		public boolean hasNext() {
-			return hasNext;
-		}
-
-		@Override
-		public T next() {
-			T ret = resolver.resolve(this.resultSet);
+		
+		void fetch(){
 			try {
-				this.hasNext = this.resultSet.next();
-				if (!hasNext) resultSet.close();
-			} catch (SQLException e) {
-				throw new RuntimeException();
+				this.hasNext = this.executor.nextResultSet(this.resultSet).get();
+			} catch (InterruptedException | ExecutionException e) {
+				throw new PreparedStatementExecutorException(e);
 			}
-			return ret;
+			if (!this.hasNext) close();
 		}
-	} 
+		
+		void close(){
+			try {
+				this.executor.closeResultSet(this.resultSet).get();
+			} catch (InterruptedException | ExecutionException e) {
+				throw new PreparedStatementExecutorException(e);
+			}
+		}
+		
+		<T> Iterator<T> asIterator(ResultSetResolver<T> resolver){
+			return new Iterator<T>() {
+				@Override
+				public boolean hasNext() {
+					return hasNext;
+				}
+
+				@Override
+				public T next() {
+					T value = resolver.resolve(resultSet);
+					fetch();
+					return value;
+				}
+			};
+		}
+	}
 	
 	class PreparedStatementBinder {
 		private final PreparedStatement ps;
-		private final ExecutorService service;
+		private final PreparedStatementExecutor executor;
 		private int parameterIndex = 1;
-		PreparedStatementBinder(PreparedStatement ps, ExecutorService service){
+		PreparedStatementBinder(PreparedStatement ps, PreparedStatementExecutor executor){
 			this.ps = ps;
-			this.service = service;
+			this.executor = executor;
 		}
 		Future<Integer> executeUpdate () {
-			return this.service.submit(new Callable<Integer>() {
-				@Override
-				public Integer call() throws Exception {
-					return ps.executeUpdate();
-				}
-			});
+			return executor.executeUpdate(this.ps);
 		}
 
-		<T> Future<Iterator<T>> executeQuery (ResultSetResolver<T> resolver) {
-			return this.service.submit(new Callable<Iterator<T>>() {
-				@Override
-				public Iterator<T> call() throws Exception {
-					return new ResultSetAsIterator<T>(ps.executeQuery(), resolver);
-				}
-			});
+		<T> Future<ResultSetFetcher> executeQuery () {
+			return executor.executeQuery(this.ps, this.executor);
 		}
 		
-		PreparedStatementBinder set(String value) throws SQLException {
-			ps.setString(parameterIndex++, value);
+		PreparedStatementBinder set(String value) {
+			try {
+				ps.setString(parameterIndex++, value);
+			} catch (SQLException e) {
+				throw new PreparedStatementExecutorException(e);
+			}
 			return this;
 		}
-		PreparedStatementBinder set(Byte value) throws SQLException {
-			ps.setByte(parameterIndex++, value);
+		PreparedStatementBinder set(Byte value){
+			try {
+				ps.setByte(parameterIndex++, value);
+			} catch (SQLException e) {
+				throw new PreparedStatementExecutorException(e);
+			}
 			return this;
 		}
-		PreparedStatementBinder set(Integer value) throws SQLException {
-			ps.setInt (parameterIndex++, value);
+		PreparedStatementBinder set(Integer value){
+			try {
+				ps.setInt (parameterIndex++, value);
+			} catch (SQLException e) {
+				throw new PreparedStatementExecutorException(e);
+			}
 			return this;
 		}
-		PreparedStatementBinder set(Long value) throws SQLException {
-			ps.setLong (parameterIndex++, value);
+		PreparedStatementBinder set(Long value){
+			try {
+				ps.setLong (parameterIndex++, value);
+			} catch (SQLException e) {
+				throw new PreparedStatementExecutorException(e);
+			}
 			return this;
 		}
-		PreparedStatementBinder set(Float value) throws SQLException {
-			ps.setFloat(parameterIndex++, value);
+		PreparedStatementBinder set(Float value){
+			try {
+				ps.setFloat(parameterIndex++, value);
+			} catch (SQLException e) {
+				throw new PreparedStatementExecutorException(e);
+			}
 			return this;
 		}
-		PreparedStatementBinder set(Double value) throws SQLException {
-			ps.setDouble(parameterIndex++, value);
+		PreparedStatementBinder set(Double value){
+			try {
+				ps.setDouble(parameterIndex++, value);
+			} catch (SQLException e) {
+				throw new PreparedStatementExecutorException(e);
+			}
 			return this;
 		}
-		PreparedStatementBinder set(Boolean value) throws SQLException {
-			ps.setBoolean(parameterIndex++, value);
+		PreparedStatementBinder set(Boolean value){
+			try {
+				ps.setBoolean(parameterIndex++, value);
+			} catch (SQLException e) {
+				throw new PreparedStatementExecutorException(e);
+			}
 			return this;
 		}
-		PreparedStatementBinder set(BigDecimal value) throws SQLException {
-			ps.setBigDecimal(parameterIndex++, value);
+		PreparedStatementBinder set(BigDecimal value){
+			try {
+				ps.setBigDecimal(parameterIndex++, value);
+			} catch (SQLException e) {
+				throw new PreparedStatementExecutorException(e);
+			}
 			return this;
 		}
-		PreparedStatementBinder set(java.sql.Date value) throws SQLException {
-			ps.setDate(parameterIndex++, value);
+		PreparedStatementBinder set(java.sql.Date value){
+			try {
+				ps.setDate(parameterIndex++, value);
+			} catch (SQLException e) {
+				throw new PreparedStatementExecutorException(e);
+			}
 			return this;
 		}
-		PreparedStatementBinder set(Blob value) throws SQLException {
-			ps.setBlob(parameterIndex++, value);
+		PreparedStatementBinder set(Blob value){
+			try {
+				ps.setBlob(parameterIndex++, value);
+			} catch (SQLException e) {
+				throw new PreparedStatementExecutorException(e);
+			}
 			return this;
 		}
-		PreparedStatementBinder set(byte[] value) throws SQLException {
-			ps.setBytes(parameterIndex++, value);
+		PreparedStatementBinder set(byte[] value){
+			try {
+				ps.setBytes(parameterIndex++, value);
+			} catch (SQLException e) {
+				throw new PreparedStatementExecutorException(e);
+			}
 			return this;
 		}
 	}
@@ -167,8 +269,8 @@ public class PreparedStatementExecutor {
 	class PreparedStatementProvider{
 		private final PreparedStatementFactory factory;
 		private final Map<String, PreparedStatementTableCache> cache;
-		PreparedStatementProvider(Connection connection, ExecutorService service){
-			this.factory = new PreparedStatementFactory(connection, service);
+		PreparedStatementProvider(PreparedStatementExecutor executor){
+			this.factory = new PreparedStatementFactory(executor);
 			this.cache = new ConcurrentHashMap<String, PreparedStatementTableCache>();
 		}
 		PreparedStatementTableCache table(TableMeta meta){
@@ -194,7 +296,7 @@ public class PreparedStatementExecutor {
 			this.selectMap= new ConcurrentHashMap<String, PreparedStatement>();
 		}
 		
-		private PreparedStatement dml(PreparedStatementType type) throws PreparedStatementProviderException{
+		private PreparedStatement dml(PreparedStatementType type){
 			PreparedStatement ps = dmlMap.get(type);
 			if (ps == null) {
 				ps = createStatement(type);
@@ -203,12 +305,12 @@ public class PreparedStatementExecutor {
 			return ps;
 		}
 		
-		PreparedStatement insert() throws PreparedStatementProviderException { return dml(PreparedStatementType.INSERT); }
-		PreparedStatement delete() throws PreparedStatementProviderException { return dml(PreparedStatementType.DELETE); }
-		PreparedStatement update() throws PreparedStatementProviderException { return dml(PreparedStatementType.UPDATE); }
-		PreparedStatement entity() throws PreparedStatementProviderException { return dml(PreparedStatementType.ENTITY); }
+		PreparedStatement insert() {return dml(PreparedStatementType.INSERT);}
+		PreparedStatement delete() {return dml(PreparedStatementType.DELETE);}
+		PreparedStatement update() {return dml(PreparedStatementType.UPDATE);}
+		PreparedStatement entity() {return dml(PreparedStatementType.ENTITY);}
 
-		PreparedStatement select(String queryStatement) throws PreparedStatementProviderException{
+		PreparedStatement select(String queryStatement){
 			PreparedStatement ps = selectMap.get(queryStatement);
 			if (ps == null) {
 				ps = factory.selectKeys(meta, queryStatement);
@@ -217,7 +319,7 @@ public class PreparedStatementExecutor {
 			return ps;
 		}
 		
-		private PreparedStatement createStatement(PreparedStatementType type) throws PreparedStatementProviderException{
+		private PreparedStatement createStatement(PreparedStatementType type){
 			if (type == PreparedStatementType.INSERT) return factory.insert(this.meta);
 			else if (type == PreparedStatementType.UPDATE) return factory.update(this.meta);
 			else if (type == PreparedStatementType.DELETE) return factory.delete(this.meta);
@@ -233,56 +335,112 @@ public class PreparedStatementExecutor {
 	}
 	
 	class PreparedStatementFactory{
-		private final Connection connection;
 		private final DmlStatementGenerator helper;
-		private final ExecutorService service;
-		PreparedStatementFactory(Connection connection, ExecutorService service){
-			this.connection = connection;
+		PreparedStatementExecutor executor;
+		PreparedStatementFactory(PreparedStatementExecutor executor){
 			helper = new DmlStatementGenerator();
-			this.service = service;
+			this.executor = executor;
 		}
 		
-		PreparedStatement update(TableMeta meta) throws PreparedStatementProviderException{
+		PreparedStatement update(TableMeta meta){
 			return prepare(helper.update(meta));
 		}
 		
-		PreparedStatement insert(TableMeta meta) throws PreparedStatementProviderException{
+		PreparedStatement insert(TableMeta meta){
 			return prepare(helper.insert(meta));
 		}
 		
-		PreparedStatement delete(TableMeta meta) throws PreparedStatementProviderException{
+		PreparedStatement delete(TableMeta meta){
 			return prepare(helper.delete(meta));
 		}
 		
-		PreparedStatement getEntity(TableMeta meta) throws PreparedStatementProviderException{
+		PreparedStatement getEntity(TableMeta meta){
 			return prepare(helper.getEntity(meta));
 		}
 		
-		PreparedStatement selectKeys(TableMeta meta, String option) throws PreparedStatementProviderException{
+		PreparedStatement selectKeys(TableMeta meta, String option){
 			return prepare(helper.selectKeys(meta, option));
 		}
 		
-		PreparedStatement prepare(String sql) throws PreparedStatementProviderException{
+		PreparedStatement prepare(String sql){
 			try {
-				return this.service.submit(new Callable<PreparedStatement>() {
-					@Override
-					public PreparedStatement call() throws Exception {
-						return connection.prepareStatement(sql);
-					}
-				}).get();
-			} catch (InterruptedException e) { 
-				throw new PreparedStatementProviderException(sql, e);
-			} catch (ExecutionException e) { 
-				throw new PreparedStatementProviderException(sql, e);
+				return this.executor.preparedStatement(sql).get();
+			} catch (InterruptedException | ExecutionException e) {
+				throw new PreparedStatementExecutorException(e);
 			}
 		}
 	}
-	@SuppressWarnings("serial") 
-	class PreparedStatementProviderException extends Exception{
-		PreparedStatementProviderException(Throwable e){
+
+	private Future<Void> closeConnection (Connection connection) {
+		return this.executorService.submit(new Callable<Void>() {
+			@Override
+			public Void call() throws Exception {
+				connection.close();
+				return null;
+			}
+		});
+	}
+
+	private Future<Void> commitConnection (Connection connection) {
+		return this.executorService.submit(new Callable<Void>() {
+			@Override
+			public Void call() throws Exception {
+				connection.commit();;
+				return null;
+			}
+		});
+	}
+
+	private Future<Void> rollbackConnection (Connection connection) {
+		return this.executorService.submit(new Callable<Void>() {
+			@Override
+			public Void call() throws Exception {
+				connection.rollback();;
+				return null;
+			}
+		});
+	}
+	
+	PreparedStatementExecutorTransaction transaction() {
+		return new PreparedStatementExecutorTransaction(this, this.connection);
+	}
+	
+	class PreparedStatementExecutorTransaction {
+		private final PreparedStatementExecutor executor;
+		private final Connection connection;
+		PreparedStatementExecutorTransaction(PreparedStatementExecutor executor, Connection connection){
+			this.executor = executor;
+			this.connection = connection;
+		}
+		void commit() {
+			try {
+				this.executor.commitConnection(connection).get();
+			} catch (InterruptedException | ExecutionException e) {
+				throw new PreparedStatementExecutorException(e);
+			}
+		}
+		void rollback() {
+			try {
+				this.executor.rollbackConnection(connection).get();
+			} catch (InterruptedException | ExecutionException e) {
+				throw new PreparedStatementExecutorException(e);
+			}
+		}
+		void close() {
+			try {
+				this.executor.closeConnection(connection).get();
+			} catch (InterruptedException | ExecutionException e) {
+				throw new PreparedStatementExecutorException(e);
+			}
+		}
+	}
+	
+	@SuppressWarnings("serial")
+	class PreparedStatementExecutorException extends RuntimeException{
+		PreparedStatementExecutorException(Throwable e){
 			super("Illegal PreparedStatement", e);
 		}
-		PreparedStatementProviderException(String sql, Throwable e){
+		PreparedStatementExecutorException(String sql, Throwable e){
 			super("Illegal Preparedstatement SQL:["+sql+"]", e);
 		}
 	}
