@@ -5,7 +5,7 @@ import static org.junit.Assert.assertThat;
 
 import org.junit.Test;
 
-import com.fujitsu.hope.datastore.TableMeta.ColumnMeta;
+import com.fujitsu.hope.datastore.meta.ColumnType;
 
 public class TableMetaTest {
 	/**
@@ -15,16 +15,15 @@ public class TableMetaTest {
 	public void testTableMetaBuildCase001(){
 		TableMeta meta = 
 				TableMeta.table("person")
-				.key("id").type(ColumnMeta.INTEGER)
-				.column("profile").type(ColumnMeta.STRING)
-				.column("profile2").type(ColumnMeta.STRING)
+				.key("id").type(ColumnType.INTEGER)
+				.attribute("profile").type(ColumnType.STRING)
+				.attribute("profile2").type(ColumnType.STRING)
 				.meta();
 		assertThat(meta.keys().length, is(1));
-		assertThat(meta.properties().length, is(2));
-		assertThat(meta.keyNames()[0], is("id"));
+		assertThat(meta.attributes().length, is(2));
 		assertThat(meta.keys()[0].getName(), is("id"));
-		assertThat(meta.columnNames()[0], is("profile"));
-		assertThat(meta.columnNames()[1], is("profile2"));
+		assertThat(meta.attributes()[0].getName(), is("profile"));
+		assertThat(meta.attributes()[1].getName(), is("profile2"));
 	}
 
 	/**
@@ -34,14 +33,14 @@ public class TableMetaTest {
 	public void testTableMetaBuildCase002(){
 		TableMeta meta = 
 				TableMeta.table("person")
-				.key("id").type(ColumnMeta.INTEGER)
+				.key("id").type(ColumnType.INTEGER)
 				.meta();
 		assertThat(meta.keys().length, is(1));
-		assertThat(meta.properties().length, is(0));
-		assertThat(meta.keyNames()[0], is("id"));
+		assertThat(meta.attributes().length, is(0));
 		assertThat(meta.keys()[0].getName(), is("id"));
-		assertThat(meta.keys()[0].getType(), is(ColumnMeta.INTEGER));
-		assertThat(meta.columnNames().length, is(0));
+		assertThat(meta.keys()[0].getName(), is("id"));
+		assertThat(meta.keys()[0].getType(), is(ColumnType.INTEGER));
+		assertThat(meta.attributes().length, is(0));
 	}
 	
 	/**
@@ -51,19 +50,17 @@ public class TableMetaTest {
 	public void testTableMetaBuildCase011(){
 		TableMeta meta = 
 				TableMeta.table("account")
-				.key("id").type(ColumnMeta.INTEGER)
-				.key("email").type(ColumnMeta.STRING)
-				.column("profile").type(ColumnMeta.STRING)
-				.column("profile2").type(ColumnMeta.STRING)
+				.key("id").type(ColumnType.INTEGER)
+				.key("email").type(ColumnType.STRING)
+				.attribute("profile").type(ColumnType.STRING)
+				.attribute("profile2").type(ColumnType.STRING)
 				.meta();
-		assertThat(meta.properties().length, is(2));
+		assertThat(meta.attributes().length, is(2));
 		assertThat(meta.keys().length, is(2));
-		assertThat(meta.keyNames()[0], is("id"));
-		assertThat(meta.keyNames()[1], is("email"));
 		assertThat(meta.keys()[0].getName(), is("id"));
 		assertThat(meta.keys()[1].getName(), is("email"));
-		assertThat(meta.columnNames()[0], is("profile"));
-		assertThat(meta.columnNames()[1], is("profile2"));
+		assertThat(meta.attributes()[0].getName(), is("profile"));
+		assertThat(meta.attributes()[1].getName(), is("profile2"));
 	}
 	
 	/**
@@ -73,20 +70,18 @@ public class TableMetaTest {
 	public void testTableMetaBuildCase012(){
 		TableMeta meta = 
 				TableMeta.table("account")
-				.key("id").type(ColumnMeta.INTEGER)
-				.key("email").type(ColumnMeta.STRING)
-				.column("profile1").type(ColumnMeta.STRING)
-				.column("profile2").type(ColumnMeta.STRING)
-				.column("profile3").type(ColumnMeta.INTEGER)
+				.key("id").type(ColumnType.INTEGER)
+				.key("email").type(ColumnType.STRING)
+				.attribute("profile1").type(ColumnType.STRING)
+				.attribute("profile2").type(ColumnType.STRING)
+				.attribute("profile3").type(ColumnType.INTEGER)
 				.meta();
-		assertThat(meta.properties().length, is(3));
+		assertThat(meta.attributes().length, is(3));
 		assertThat(meta.keys().length, is(2));
-		assertThat(meta.keyNames()[0], is("id"));
-		assertThat(meta.keyNames()[1], is("email"));
 		assertThat(meta.keys()[0].getName(), is("id"));
 		assertThat(meta.keys()[1].getName(), is("email"));
-		assertThat(meta.columnNames()[0], is("profile1"));
-		assertThat(meta.columnNames()[1], is("profile2"));
-		assertThat(meta.columnNames()[2], is("profile3"));
+		assertThat(meta.attributes()[0].getName(), is("profile1"));
+		assertThat(meta.attributes()[1].getName(), is("profile2"));
+		assertThat(meta.attributes()[2].getName(), is("profile3"));
 	}
 }

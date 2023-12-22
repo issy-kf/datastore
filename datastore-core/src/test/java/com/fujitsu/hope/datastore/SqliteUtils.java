@@ -11,7 +11,7 @@ import java.util.Map;
 import java.util.Set;
 
 import com.fujitsu.hope.datastore.TableMeta.ColumnMeta;
-import com.fujitsu.hope.datastore.TableMeta.ColumnMetaType;
+import com.fujitsu.hope.datastore.meta.ColumnType;
 
 class SqliteUtils {
 	private static final String JDBC_CLASS = "org.sqlite.JDBC"; 
@@ -59,19 +59,19 @@ class SqliteUtils {
 			NULL
 		}
 		
-		private static final Map<ColumnMetaType<?>, SQLITE_COLUMN_TYPE> TYPE_MAP = 
-				new HashMap<ColumnMetaType<?>, SQLITE_COLUMN_TYPE>();
+		private static final Map<ColumnType, SQLITE_COLUMN_TYPE> TYPE_MAP = 
+				new HashMap<ColumnType, SQLITE_COLUMN_TYPE>();
 		
 		static {
-			TYPE_MAP.put(ColumnMeta.INTEGER, SQLITE_COLUMN_TYPE.INTEGER);
-			TYPE_MAP.put(ColumnMeta.LONG,    SQLITE_COLUMN_TYPE.INTEGER);
-			TYPE_MAP.put(ColumnMeta.SHORT,   SQLITE_COLUMN_TYPE.INTEGER);
-			TYPE_MAP.put(ColumnMeta.BYTE, 	SQLITE_COLUMN_TYPE.INTEGER);
-			TYPE_MAP.put(ColumnMeta.DOUBLE,  SQLITE_COLUMN_TYPE.REAL);
-			TYPE_MAP.put(ColumnMeta.FLOAT,   SQLITE_COLUMN_TYPE.REAL);
-			TYPE_MAP.put(ColumnMeta.STRING,  SQLITE_COLUMN_TYPE.TEXT);
-			TYPE_MAP.put(ColumnMeta.DATE,    SQLITE_COLUMN_TYPE.INTEGER);
-			TYPE_MAP.put(ColumnMeta.BOOLEAN, SQLITE_COLUMN_TYPE.NULL);
+			TYPE_MAP.put(ColumnType.INTEGER, SQLITE_COLUMN_TYPE.INTEGER);
+			TYPE_MAP.put(ColumnType.LONG,    SQLITE_COLUMN_TYPE.INTEGER);
+			TYPE_MAP.put(ColumnType.SHORT,   SQLITE_COLUMN_TYPE.INTEGER);
+			TYPE_MAP.put(ColumnType.BYTE, 	SQLITE_COLUMN_TYPE.INTEGER);
+			TYPE_MAP.put(ColumnType.DOUBLE,  SQLITE_COLUMN_TYPE.REAL);
+			TYPE_MAP.put(ColumnType.FLOAT,   SQLITE_COLUMN_TYPE.REAL);
+			TYPE_MAP.put(ColumnType.STRING,  SQLITE_COLUMN_TYPE.TEXT);
+			TYPE_MAP.put(ColumnType.DATE,    SQLITE_COLUMN_TYPE.INTEGER);
+			TYPE_MAP.put(ColumnType.BOOLEAN, SQLITE_COLUMN_TYPE.NULL);
 		}
 				
 		static String create(TableMeta p){
@@ -83,16 +83,14 @@ class SqliteUtils {
 			
 			// 
 			Set<String> keySet = new HashSet<String>();
-			for(ColumnMeta<?> meta : p.keys()) keySet.add(meta.getName());
+			for(ColumnMeta meta : p.keys()) keySet.add(meta.getName());
 			
 			// add all key and all column; 
-			List<ColumnMeta<?>> columnList = new ArrayList<ColumnMeta<?>>();
-			for(ColumnMeta<?> meta : p.keys()) 
-				columnList.add(meta);
-			for(ColumnMeta<?> meta : p.properties()) 
-				columnList.add(meta);
+			List<ColumnMeta> columnList = new ArrayList<ColumnMeta>();
+			for(ColumnMeta meta : p.keys()) columnList.add(meta);
+			for(ColumnMeta meta : p.attributes()) columnList.add(meta);
 			
-			for(ColumnMeta<?> column : columnList){
+			for(ColumnMeta column : columnList){
 				if(first) first = false;
 				else sb.append(", ");
 				

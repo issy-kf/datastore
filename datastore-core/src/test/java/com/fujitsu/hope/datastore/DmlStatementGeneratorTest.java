@@ -5,16 +5,16 @@ import static org.junit.Assert.assertThat;
 
 import org.junit.Test;
 
-import com.fujitsu.hope.datastore.TableMeta.ColumnMeta;
+import com.fujitsu.hope.datastore.meta.ColumnType;
 
 public class DmlStatementGeneratorTest {
 	static TableMeta person(){
 		return TableMeta
 				.table("person")
-				.key("personId").type(ColumnMeta.LONG)
-				.column("firstName").type(ColumnMeta.STRING)
-				.column("familyName").type(ColumnMeta.STRING)
-				.column("age").type(ColumnMeta.LONG)
+				.key("personId").type(ColumnType.LONG)
+				.attribute("firstName").type(ColumnType.STRING)
+				.attribute("familyName").type(ColumnType.STRING)
+				.attribute("age").type(ColumnType.LONG)
 				.meta();
 	}
 
@@ -51,30 +51,30 @@ public class DmlStatementGeneratorTest {
 	static TableMeta account(){
 		return TableMeta
 				.table("account")
-				.key("personId").type(ColumnMeta.LONG)
-				.key("email").type(ColumnMeta.STRING)
-				.column("firstName").type(ColumnMeta.STRING)
-				.column("familyName").type(ColumnMeta.STRING)
-				.column("age").type(ColumnMeta.LONG)
+				.key("personId").type(ColumnType.LONG)
+				.key("email").type(ColumnType.STRING)
+				.attribute("firstName").type(ColumnType.STRING)
+				.attribute("familyName").type(ColumnType.STRING)
+				.attribute("age").type(ColumnType.LONG)
 				.meta();
 	}
 	
 	@Test
-	public void testDmlStatementGeneratorCaseAccountSelectKey(){
+	public void testDMLStatementGeneratorCaseAccountSelectKey(){
 		TableMeta account = account();
 		String result = DmlStatementGenerator.selectKeys(account, "where personId=?");
 		assertThat(result, is("select personId, email from account where personId=?"));
 	}
 
 	@Test
-	public void testDmlStatementGeneratorCaseAccountSelectKey02(){
+	public void testDMLStatementGeneratorCaseAccountSelectKey02(){
 		TableMeta account = account();
 		String result = DmlStatementGenerator.selectKeys(account, "where personId=? and email=?");
 		assertThat(result, is("select personId, email from account where personId=? and email=?"));
 	}
 	
 	@Test
-	public void testDmlStatementGeneratorCaseAccountGetEntiry(){
+	public void testDMLStatementGeneratorCaseAccountGetEntiry(){
 		String result = DmlStatementGenerator.getEntity(account());
 		assertThat(result, is("select personId, email, firstName, familyName, age from account where personId=? and email=?"));
 	}

@@ -1,9 +1,9 @@
 <project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
 	xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
 	<modelVersion>4.0.0</modelVersion>
-	<artifactId>datastore-jdbc</artifactId>
+	<artifactId>datastore-core</artifactId>
 	<packaging>jar</packaging>
-	<name>datastore-jdbc</name>
+	<name>datastore-core</name>
 	<parent>
 		<groupId>com.fujitsu.hope</groupId>
 		<artifactId>datastore-pom</artifactId>
@@ -12,15 +12,15 @@
 	</parent>
 	<dependencies>
 		<dependency>
+			<groupId>com.fujitsu.hope</groupId>
+			<artifactId>datastore-meta</artifactId>
+			<version>0.1</version>
+		</dependency>
+		<dependency>
 			<groupId>org.xerial</groupId>
 			<artifactId>sqlite-jdbc</artifactId>
 			<version>3.7.2</version>
 			<scope>test</scope>
-		</dependency>
-		<dependency>
-			<groupId>com.googlecode.sli4j</groupId>
-			<artifactId>sli4j-slf4j-logback</artifactId>
-			<version>2.0</version>
 		</dependency>
 	</dependencies>
 </project>

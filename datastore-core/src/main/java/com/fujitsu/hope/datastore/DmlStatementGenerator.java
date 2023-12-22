@@ -1,7 +1,16 @@
 package com.fujitsu.hope.datastore;
 
-class DmlStatementGenerator {
+import com.fujitsu.hope.datastore.TableMeta.ColumnMeta;
 
+class DmlStatementGenerator {
+	private static String[] columnToStringArray(ColumnMeta[] meta) {
+		String[] strings = new String[meta.length];
+		for(int i=0; i<strings.length; i++)
+			strings[i] = meta[i].getName();
+		return strings;
+	}
+	
+	
 	/**
 	 * generate statement:
 	 *  "select key1, key2, property1, property2 from table_name"
@@ -9,9 +18,11 @@ class DmlStatementGenerator {
 	 * @return String: statement
 	 */
 	static String getEntity(TableMeta meta){
-		return "select " + 
-				StatementGenerateHelper.connectString(", ", StatementGenerateHelper.joinArrays(meta.keyNames(), meta.columnNames())) + " " + 
-				"from " + meta.tableName() + " " + StatementGenerateHelper.where(meta.keyNames());
+		String[] selectArray = StatementGenerateHelper.joinArrays(columnToStringArray(meta.keys()),columnToStringArray(meta.attributes()));
+		String select = "select " + StatementGenerateHelper.connectString(", ", selectArray) + " ";
+		String from = "from " + meta.tableName() + " ";
+		String where = StatementGenerateHelper.where(columnToStringArray(meta.keys()));
+		return select + from + where;
 	}
 	
 	/**
@@ -22,7 +33,7 @@ class DmlStatementGenerator {
 	 */
 	static String selectKeys(TableMeta meta, String statementWhereOrderby){
 		return "select " + 
-				StatementGenerateHelper.connectString(", ", meta.keyNames()) + " " + 
+				StatementGenerateHelper.connectString(", ", columnToStringArray(meta.keys())) + " " + 
 				"from " + meta.tableName() + " " + statementWhereOrderby;
 	}
 	
@@ -34,7 +45,8 @@ class DmlStatementGenerator {
 	 * @return String: statement
 	 */
 	static String delete(TableMeta meta){
-		return "delete from " + meta.tableName() + " " + StatementGenerateHelper.where(meta.keyNames()); 
+		return "delete from " + meta.tableName() + " " 
+				+ StatementGenerateHelper.where(columnToStringArray(meta.keys())); 
 	}
 	
 	/**
@@ -47,8 +59,8 @@ class DmlStatementGenerator {
 	 */
 	static String update(TableMeta meta){
 		return "update " + meta.tableName() + " " 
-				+ StatementGenerateHelper.set(meta.columnNames()) + " " 
-				+ StatementGenerateHelper.where(meta.keyNames());
+				+ StatementGenerateHelper.set(columnToStringArray(meta.attributes())) + " " 
+				+ StatementGenerateHelper.where(columnToStringArray(meta.keys()));
 	}
 	
 	/**
@@ -90,7 +102,7 @@ class DmlStatementGenerator {
 		
 		
 		static String into(TableMeta meta){
-			String[] joined = joinArrays(meta.keyNames(), meta.columnNames());
+			String[] joined = joinArrays(columnToStringArray(meta.keys()), columnToStringArray(meta.attributes()));
 			return "into "
 					+ meta.tableName() + " "
 					+ inParentheses(connectString(", ", joined));
@@ -103,7 +115,7 @@ class DmlStatementGenerator {
 		 * @return
 		 */
 		static String values(TableMeta meta){
-			int valuesLength = meta.columnNames().length + meta.keyNames().length;
+			int valuesLength = meta.attributes().length + meta.keys().length;
 			String[] bindStrings = new String[valuesLength];
 			for(int i=0; i<valuesLength; i++)  bindStrings[i] = "?";
 			return "values " + inParentheses(connectString(", ", bindStrings));

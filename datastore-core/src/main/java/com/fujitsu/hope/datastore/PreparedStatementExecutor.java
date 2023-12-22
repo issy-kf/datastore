@@ -179,7 +179,7 @@ class PreparedStatementExecutor {
 			return executor.executeQuery(this.ps, this.executor);
 		}
 		
-		PreparedStatementBinder set(String value) {
+		PreparedStatementBinder setString(String value) {
 			try {
 				ps.setString(parameterIndex++, value);
 			} catch (SQLException e) {
@@ -187,7 +187,7 @@ class PreparedStatementExecutor {
 			}
 			return this;
 		}
-		PreparedStatementBinder set(Byte value){
+		PreparedStatementBinder setByte(Byte value){
 			try {
 				ps.setByte(parameterIndex++, value);
 			} catch (SQLException e) {
@@ -195,7 +195,15 @@ class PreparedStatementExecutor {
 			}
 			return this;
 		}
-		PreparedStatementBinder set(Integer value){
+		PreparedStatementBinder setShort(Short value){
+			try {
+				ps.setShort(parameterIndex++, value);
+			} catch (SQLException e) {
+				throw new PreparedStatementExecutorException(e);
+			}
+			return this;
+		}
+		PreparedStatementBinder setInteger(Integer value){
 			try {
 				ps.setInt (parameterIndex++, value);
 			} catch (SQLException e) {
@@ -203,7 +211,7 @@ class PreparedStatementExecutor {
 			}
 			return this;
 		}
-		PreparedStatementBinder set(Long value){
+		PreparedStatementBinder setLong(Long value){
 			try {
 				ps.setLong (parameterIndex++, value);
 			} catch (SQLException e) {
@@ -211,7 +219,7 @@ class PreparedStatementExecutor {
 			}
 			return this;
 		}
-		PreparedStatementBinder set(Float value){
+		PreparedStatementBinder setFloat(Float value){
 			try {
 				ps.setFloat(parameterIndex++, value);
 			} catch (SQLException e) {
@@ -219,7 +227,7 @@ class PreparedStatementExecutor {
 			}
 			return this;
 		}
-		PreparedStatementBinder set(Double value){
+		PreparedStatementBinder setDouble(Double value){
 			try {
 				ps.setDouble(parameterIndex++, value);
 			} catch (SQLException e) {
@@ -227,7 +235,7 @@ class PreparedStatementExecutor {
 			}
 			return this;
 		}
-		PreparedStatementBinder set(Boolean value){
+		PreparedStatementBinder setBoolean(Boolean value){
 			try {
 				ps.setBoolean(parameterIndex++, value);
 			} catch (SQLException e) {
@@ -235,7 +243,7 @@ class PreparedStatementExecutor {
 			}
 			return this;
 		}
-		PreparedStatementBinder set(BigDecimal value){
+		PreparedStatementBinder setBigDecimal(BigDecimal value){
 			try {
 				ps.setBigDecimal(parameterIndex++, value);
 			} catch (SQLException e) {
@@ -243,7 +251,7 @@ class PreparedStatementExecutor {
 			}
 			return this;
 		}
-		PreparedStatementBinder set(java.sql.Date value){
+		PreparedStatementBinder setDate(java.sql.Date value){
 			try {
 				ps.setDate(parameterIndex++, value);
 			} catch (SQLException e) {
@@ -251,7 +259,7 @@ class PreparedStatementExecutor {
 			}
 			return this;
 		}
-		PreparedStatementBinder set(Blob value){
+		PreparedStatementBinder setBlob(Blob value){
 			try {
 				ps.setBlob(parameterIndex++, value);
 			} catch (SQLException e) {
@@ -259,7 +267,7 @@ class PreparedStatementExecutor {
 			}
 			return this;
 		}
-		PreparedStatementBinder set(byte[] value){
+		PreparedStatementBinder setBytes(byte[] value){
 			try {
 				ps.setBytes(parameterIndex++, value);
 			} catch (SQLException e) {
