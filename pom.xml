@@ -9,7 +9,8 @@
 	<url>https://github.com/issy-kf/datastore</url>
 	<modules>
 		<module>datastore-pom</module>
-		<module>datastore-jdbc</module>
+		<module>datastore-core</module>
+		<module>datastore-meta</module>
 <!--		<module>datastore-api</module>-->
 <!--		<module>datastore-sqlite</module>-->
 	</modules>
